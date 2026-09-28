@@ -12,7 +12,12 @@ pub struct Progress {
 pub const BUF_SIZE: usize = 1024 * 1024;
 
 /// Write `total` bytes from `src` to `dst` (1 MiB chunks), then
-/// fsync + BLKFLSBUF (block devices only) + sync.
+/// fsync + BLKFLSBUF (block devices only).
+///
+/// Note: no system-wide `sync()` here — it flushes *every* filesystem and
+/// can block for minutes on boxes with FUSE/network mounts, stalling the
+/// flash→verify transition. `sync_all` on the device + BLKFLSBUF are enough
+/// to guarantee the data is on the target disk.
 pub fn flash(
     mut src: &File,
     mut dst: &File,
@@ -47,7 +52,6 @@ pub fn flash(
     }
     dst.sync_all()?;
     let _ = blkflush(dst); // best-effort; files don't have it
-    nix::unistd::sync();
     Ok(())
 }
 

@@ -72,7 +72,7 @@ A write happens only if **all four** layers pass:
 4. **Type-to-confirm** — you must type the exact device name. No Enter-only,
    no "y", no timeout.
 
-After the write: `fsync` + `BLKFLSBUF` + `sync`, then the first
+After the write: `fsync` + `BLKFLSBUF`, then the first
 `iso_size` bytes of the drive are hashed and compared to the ISO's sha256.
 Verification failure is reported as a failure.
 
