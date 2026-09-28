@@ -644,6 +644,16 @@ impl EtcherApp {
         if matches!(self.step, Step::Flashing | Step::Verifying) {
             ctx.request_repaint_after(Duration::from_millis(200));
         }
+        // Drive the Done screen's 0.6s check/x draw-on. Without this the single
+        // repaint from the transition catches the animation at t≈0 and freezes
+        // it (tiny circle, fragment of a tick).
+        let done_animating = self
+            .done_at
+            .map(|t| t.elapsed() < Duration::from_millis(650))
+            .unwrap_or(false);
+        if self.step == Step::Done && done_animating {
+            ctx.request_repaint_after(Duration::from_millis(16));
+        }
     }
 }
 
@@ -1055,7 +1065,9 @@ impl EtcherApp {
                                 let fw = (bar.width() * frac).max(8.0);
                                 let fill = egui::Rect::from_min_size(bar.min, egui::vec2(fw, 8.0));
                                 p.rect(fill, 4.0, colors::ACCENT, egui::Stroke::NONE);
-                                icons::glisten(p, fill, t * 60.0 % fw);
+                                // Smooth sweep: a fixed 2s cycle scaled to the fill
+                                // width. (Modulo-ing by fw directly jumps as fw grows.)
+                                icons::glisten(p, fill, (t * 0.5 % 1.0) * fw);
                             }
                         });
                     });
@@ -1429,8 +1441,9 @@ impl EtcherApp {
                 let fw = (bar_rect.width() * frac).max(10.0);
                 let fill_rect = egui::Rect::from_min_size(bar_rect.min, egui::vec2(fw, 10.0));
                 p.rect(fill_rect, 5.0, colors::ACCENT, egui::Stroke::NONE);
-                // Small soft glisten sweeping within the filled portion.
-                icons::glisten(p, fill_rect, time * 60.0 % fw);
+                // Small soft glisten sweeping within the filled portion. A fixed
+                // 2s cycle scaled to the fill width — smooth as fw grows.
+                icons::glisten(p, fill_rect, (time * 0.5 % 1.0) * fw);
             }
             ui.add_space(10.0);
             // Big percentage + stats.
