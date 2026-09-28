@@ -13,10 +13,16 @@ cargo build --release
 
 ## Install (Arch / Omarchy)
 
-An AUR package is provided in [`aur/last-etcher-git`](aur/last-etcher-git/PKGBUILD):
+One-liner (downloads the prebuilt binary, no sudo, no build):
 
 ```sh
-yay -S last-etcher-git   # or any AUR helper
+curl -fsSL https://raw.githubusercontent.com/leoplanet/last-etcher/master/install.sh | sh
+```
+
+Or from an AUR helper, once the package is submitted:
+
+```sh
+yay -S last-etcher-git   # PKGBUILD in aur/last-etcher-git/
 ```
 
 ## Usage
