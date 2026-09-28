@@ -302,6 +302,15 @@ impl EtcherApp {
                     // from app start (the ISO hash takes minutes).
                     self.prev = (self.progress.done, Instant::now());
                 }
+                if line == "Verifying…" {
+                    // The CLI (sudo path) does write + verify in one process —
+                    // mirror the phase change so the stepper and heading move
+                    // to Verify Drive, and restart the bar/ETA for the new phase.
+                    self.step = Step::Verifying;
+                    self.progress.done = 0;
+                    self.speed_ema = None;
+                    self.prev = (0, Instant::now());
+                }
                 if line.starts_with('…') {
                     // In-progress line: replace the previous partial.
                     if self
@@ -1621,7 +1630,7 @@ mod render_tests {
             screen_rect: Some(TEST_WINDOW),
             ..Default::default()
         };
-        ctx.run(raw, |ctx| app.render(ctx));
+        let _ = ctx.run(raw, |ctx| app.render(ctx));
     }
 
     /// Render a single screen into a fixed-size Ui and report whether the
@@ -1637,7 +1646,7 @@ mod render_tests {
             ..Default::default()
         };
         let mut fits = true;
-        ctx.run(raw, |ctx| {
+        let _ = ctx.run(raw, |ctx| {
             let mut ui = egui::Ui::new(
                 ctx.clone(),
                 egui::LayerId::new(egui::Order::Foreground, egui::Id::new("fit-layer")),
@@ -1654,6 +1663,28 @@ mod render_tests {
             }
         });
         fits
+    }
+
+    /// The sudo path runs the CLI (write + verify) as one child process. The
+    /// GUI must mirror the CLI's "Verifying…" marker so the stepper and
+    /// heading move to Verify Drive. Regression test for the "timeline never
+    /// reaches Verify Drive" bug.
+    #[test]
+    fn sudo_path_transitions_to_verifying() {
+        let mut app = EtcherApp::build();
+        app.step = Step::Flashing;
+        let (tx, rx) = std::sync::mpsc::channel();
+        app.child_rx = Some(rx);
+
+        app.poll();
+        tx.send("Writing…".to_string()).unwrap();
+        app.poll();
+        assert_eq!(app.step, Step::Flashing, "Writing… must stay on Flash Drive");
+
+        tx.send("Verifying…".to_string()).unwrap();
+        app.poll();
+        assert_eq!(app.step, Step::Verifying, "Verifying… must move to Verify Drive");
+        assert_eq!(app.progress.done, 0, "verify phase must restart the bar");
     }
 
     fn test_iso() -> iso::IsoInfo {
@@ -1717,7 +1748,7 @@ mod render_tests {
         let ctx = egui::Context::default();
         let raw = egui::RawInput { screen_rect: Some(live), ..Default::default() };
         let mut used_h = f32::NAN;
-        ctx.run(raw, |ctx| {
+        let _ = ctx.run(raw, |ctx| {
             let mut ui = egui::Ui::new(
                 ctx.clone(),
                 egui::LayerId::new(egui::Order::Foreground, egui::Id::new("live-fit")),
