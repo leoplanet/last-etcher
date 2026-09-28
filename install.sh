@@ -9,7 +9,7 @@
 set -eu
 
 REPO="leoplanet/last-etcher"
-TAG="v0.1.0-alpha"
+TAG="v0.1.1-alpha"
 BIN="last-etcher"
 
 case "$(uname -m)" in
