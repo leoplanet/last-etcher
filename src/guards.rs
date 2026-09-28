@@ -132,15 +132,20 @@ impl Guards {
         let mut out = Vec::new();
         let mut points = Vec::new();
         for line in text.lines() {
-            // /proc/self/mounts: field 1 = device, field 2 = mountpoint
+            // /proc/self/mounts: field 1 = device, field 2 = mountpoint.
+            // Spaces in paths are octal-escaped (\040) — unescape them, or
+            // e.g. `umount` gets a path with literal backslashes.
             let mut f = line.split_whitespace();
-            let (dev, point) = (f.next().unwrap_or(""), f.next().unwrap_or(""));
-            if let Some(disk) = Self::resolve_device(sysfs, dev) {
+            let (dev, point) = (
+                unescape_mount(f.next().unwrap_or("")),
+                unescape_mount(f.next().unwrap_or("")),
+            );
+            if let Some(disk) = Self::resolve_device(sysfs, &dev) {
                 if !out.contains(&disk) {
                     out.push(disk.clone());
                 }
                 if !point.is_empty() {
-                    points.push((disk, point.to_string()));
+                    points.push((disk, point));
                 }
             }
         }
@@ -150,8 +155,8 @@ impl Guards {
     fn swap_disks(sysfs: &Sysfs, text: &str) -> Vec<String> {
         let mut out = Vec::new();
         for line in text.lines() {
-            let dev = line.split_whitespace().next().unwrap_or("");
-            if let Some(disk) = Self::resolve_device(sysfs, dev) {
+            let dev = unescape_mount(line.split_whitespace().next().unwrap_or(""));
+            if let Some(disk) = Self::resolve_device(sysfs, &dev) {
                 if !out.contains(&disk) {
                     out.push(disk);
                 }
@@ -159,6 +164,28 @@ impl Guards {
         }
         out
     }
+}
+
+/// Unescape octal escapes (`\040` = space, `\011` = tab, `\012` = newline,
+/// …) as used by `/proc/mounts` for spaces in mountpoints and device names.
+fn unescape_mount(s: &str) -> String {
+    let b = s.as_bytes();
+    let mut out = Vec::with_capacity(b.len());
+    let mut i = 0;
+    while i < b.len() {
+        if b[i] == b'\\' && i + 3 < b.len()
+            && b[i + 1..i + 4]
+                .iter()
+                .all(|c| c.is_ascii_digit() && *c <= b'7')
+        {
+            out.push(((b[i + 1] - b'0') * 64 + (b[i + 2] - b'0') * 8 + (b[i + 3] - b'0')) as u8);
+            i += 4;
+        } else {
+            out.push(b[i]);
+            i += 1;
+        }
+    }
+    String::from_utf8_lossy(&out).into_owned()
 }
 
 #[cfg(test)]
@@ -216,6 +243,19 @@ mod tests {
         let g = Guards::from_texts(sys, None, mounts, "");
         assert_eq!(g.exclusion("sdc"), Some(Exclusion::Mounted));
         assert_eq!(g.exclusion("sdb"), None);
+        fs::remove_dir_all(d).unwrap();
+    }
+
+    #[test]
+    fn mount_points_with_spaces_are_unescaped() {
+        let d = tmp("spaces");
+        fixture(&d);
+        let sys = Sysfs::new(&d);
+        // /proc/mounts stores spaces as \040
+        let mounts = "/dev/sdc1 /run/media/leo/Debian\\04013.7.0\\040amd64\\040netinst ext4 rw 0 0\n";
+        let g = Guards::from_texts(sys, None, mounts, "");
+        let pts = g.mount_points_of("sdc");
+        assert_eq!(pts, vec!["/run/media/leo/Debian 13.7.0 amd64 netinst".to_string()]);
         fs::remove_dir_all(d).unwrap();
     }
 
