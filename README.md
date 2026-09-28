@@ -19,6 +19,12 @@ One-liner (downloads the prebuilt binary, no sudo, no build):
 curl -fsSL https://raw.githubusercontent.com/leoplanet/last-etcher/master/install.sh | sh
 ```
 
+Uninstall:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/leoplanet/last-etcher/master/uninstall.sh | sh
+```
+
 An AUR package is **not** (yet) submitted — AUR registration is currently disabled.
 The PKGBUILD is ready in [`aur/last-etcher-git`](aur/last-etcher-git/PKGBUILD) and will be
 submitted as `last-etcher-git` once registration reopens.
