@@ -488,7 +488,16 @@ impl EtcherApp {
                     .inner_margin(egui::Margin::symmetric(20.0, 10.0)),
             )
             .show(ctx, |ui| {
-                ui.label(egui::RichText::new("LAST ETCHER").strong().size(theme::type_scale::TITLE));
+                ui.horizontal(|ui| {
+                    ui.label(egui::RichText::new("LAST ETCHER").strong().size(theme::type_scale::TITLE));
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        ui.label(
+                            egui::RichText::new("by Leo Choudhary")
+                                .weak()
+                                .size(theme::type_scale::BADGE),
+                        );
+                    });
+                });
                 ui.add_space(6.0);
                 self.draw_stepper(ui);
             });
@@ -1511,12 +1520,6 @@ impl EtcherApp {
                                 });
                         });
                 }
-                ui.add_space(14.0);
-                ui.label(
-                    egui::RichText::new("LAST ETCHER · by Leo Choudhary")
-                        .weak()
-                        .size(theme::type_scale::BADGE),
-                );
             });
         });
     }
