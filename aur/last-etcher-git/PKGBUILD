@@ -1,0 +1,24 @@
+# Maintainer: Leo Choudhary <trackingleo@gmail.com>
+pkgname=last-etcher-git
+pkgver=20250928
+pkgrel=1
+pkgdesc="Write a live ISO to a USB drive, with multi-layer safety (LAST ETCHER)"
+arch=(x86_64)
+url="https://github.com/leoplanet/last-etcher"
+license=(MIT)
+depends=(glib2)
+makedepends=(cargo)
+source=("$pkgname::git+https://github.com/leoplanet/last-etcher#short=1")
+sha256sums=('SKIP')
+
+build() {
+  cd "$pkgname"
+  cargo build --release --locked
+}
+
+package() {
+  cd "$pkgname"
+  install -Dm755 target/release/etcher "$pkgdir"/usr/bin/last-etcher
+  install -Dm644 assets/icon.png "$pkgdir"/usr/share/icons/hicolor/256x256/apps/last-etcher.png
+  install -Dm644 aur/last-etcher-git/last-etcher.desktop "$pkgdir"/usr/share/applications/last-etcher.desktop
+}

@@ -1,0 +1,3 @@
+/target
+# Machine-local build config (redirects target/ off FUSE mounts)
+.cargo/config.toml

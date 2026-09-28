@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=LAST ETCHER
+Comment=Write a live ISO to a USB drive, safely
+Exec=last-etcher
+Icon=last-etcher
+Terminal=false
+Categories=Utility;DiskBuilder;
